@@ -1,40 +1,32 @@
 pipeline {
-    agent { label "dev-agent"}
+    agent { label 'dev-agent' }
     
-    stages {
-        
-        stage("code"){
-            steps{
-                git url: "https://github.com/LondheShubham153/node-todo-cicd.git", branch: "master"
-                echo 'bhaiyya code clone ho gaya'
-            }
+    stages{
+        stage('code'){
+           steps {
+               git url: 'https://github.com/Satyadevoperations/node-todo-cicd.git', branch: 'master'
+           }
         }
-        stage("build and test"){
-            steps{
-                sh "docker build -t node-app-test-new ."
-                echo 'code build bhi ho gaya'
-            }
+        stage('Build and Test'){
+           steps {
+               sh 'docker build . -t narayanhari/node-todo-app-cicd:latest'
+			   sh 'docker run -d -p 8080:8080 narayanhari/node-todo-app-cicd:latest'
+           }
         }
-        stage("scan image"){
-            steps{
-                echo 'image scanning ho gayi'
-            }
+        stage('Login and Push Image'){
+           steps {               
+               withCredentials([usernamePassword(credentialsId:'dockerhub', passwordVariable: 'dockerhubPassword', usernameVariable: 'dockerhubUser')]) {
+                   sh "docker login -u ${env.dockerhubUser} -p ${env.dockerhubPassword}"
+				   sh "docker tag node-todo-app:latest narayanhari/node-todo-app-cicd:latest"
+                   sh "docker push narayanhari/node-todo-app-cicd:latest"
+				   echo 'logging into docker hub and pushing image'
+               }
+           }
         }
-        stage("push"){
-            steps{
-                withCredentials([usernamePassword(credentialsId:"dockerHub",passwordVariable:"dockerHubPass",usernameVariable:"dockerHubUser")]){
-                sh "docker login -u ${env.dockerHubUser} -p ${env.dockerHubPass}"
-                sh "docker tag node-app-test-new:latest ${env.dockerHubUser}/node-app-test-new:latest"
-                sh "docker push ${env.dockerHubUser}/node-app-test-new:latest"
-                echo 'image push ho gaya'
-                }
-            }
-        }
-        stage("deploy"){
-            steps{
-                sh "docker-compose down && docker-compose up -d"
-                echo 'deployment ho gayi'
-            }
+        stage('Deploy'){
+           steps {
+               sh 'docker-compose down && docker-compose up --d'
+           }
         }
     }
 }
